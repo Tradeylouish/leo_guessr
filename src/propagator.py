@@ -1,6 +1,4 @@
 import numpy as np
-from skyfield.api import Loader, EarthSatellite
-from skyfield.timelib import Time
 
 import plotting
 
