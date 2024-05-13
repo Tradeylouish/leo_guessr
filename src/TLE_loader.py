@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from skyfield.api import Loader, EarthSatellite
 from skyfield.timelib import Time
@@ -12,23 +14,27 @@ def load_tle():
     data = load('de421.bsp')
     ts   = load.timescale()
 
-    # Get a TLE for plotting
-    TLE = """1 43205U 18017A   18038.05572532 +.00020608 -51169-6 +11058-3 0  9993
-2 43205 029.0165 287.1006 3403068 180.4827 179.1544 08.75117793000017"""
-    L1, L2 = TLE.splitlines()
+    # Get TLEs from Celestrak
+    stations_url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle'
+    satellites = load.tle_file(stations_url)
+    print('Loaded', len(satellites), 'satellites')
 
-    # Create the satellite object
-    Roadster = EarthSatellite(L1, L2)   
+    index = random.randint(0, len(satellites))
+    rand_sat = satellites[index]
+    print(rand_sat) 
 
-    # Calculate the period and produce a corresponding time series
-    elements = osculating_elements_of(Roadster.at(Roadster.epoch))
+    # Calculate the period
+    elements = osculating_elements_of(rand_sat.at(rand_sat.epoch))
     period = elements.period_in_days*24
     print(f"{period} hour orbit")
     hours = np.arange(0, period, 0.01)
-    time = ts.utc(2024, 2, 7, hours)
+
+    # Produce a Time object spanning a series of timestamps on the current date
+    today = ts.now()
+    time = ts.utc(today.utc.year, today.utc.month, today.utc.day, hours)
 
     # Propagate the orbit through the time series
-    return Roadster.at(time).position.km
+    return rand_sat.at(time).position.km
 
 if __name__ == '__main__':
     Rpos = load_tle()
