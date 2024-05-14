@@ -1,6 +1,9 @@
 from mayavi import mlab
 from tvtk.api import tvtk
 
+def close_plots():
+    mlab.close()
+
 def plot_orbit(Rpos) -> None:
     x, y, z = Rpos
 
