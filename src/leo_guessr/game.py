@@ -7,72 +7,112 @@ from skyfield.elementslib import osculating_elements_of
 
 import plotting
 
+class Game:
 
-def calculate_score(period_guess, period, inclination_guess, inclination):
-    MAX_POINTS = 30
-    period_score = max(0, 1 - abs((period - period_guess) / period))
-    inclination_score = max(0, 1 - abs((inclination - inclination_guess) / inclination))
+    satellites, ts = '',''
+    total_score = 0
+    answers = {'semimajor_axis':0,
+               'eccentricity':0,
+               'inclination':0,
+               'longitude_of_AN':0,
+               'argument_of_periapsis':0
+    }
+
+    def __init__(self) -> None:
+        self.load_tles()
+
+    def calculate_score(self, guesses : dict[str:float]):
+        MAX_POINTS = 30
+        score_multiplier = 1
+
+        for key in guesses:
+            answer = self.answers[key]
+            # TODO change scoring algorithm to better avoid division by 0
+            # Avoid division by 0
+            if answer == 0:
+                continue
+            score_multiplier *= max(0, 1 - abs((answer - guesses[key]) / answer))
+
+        return round(MAX_POINTS * score_multiplier)
+
+    def get_random_orbit(self):
+        index = random.randint(0, len(self.satellites))
+        rand_sat = self.satellites[index]
+        return rand_sat
     
-    return round(MAX_POINTS * period_score * inclination_score)
+    def propagate_orbit(self, satellite):
+        # Calculate the period in hours
+        elements = osculating_elements_of(satellite.at(satellite.epoch))
+        period = elements.period_in_days*24
 
-def play_game(satellites, ts):
-    index = random.randint(0, len(satellites))
-    rand_sat = satellites[index]
-    print(rand_sat) 
+        # Create a time series representing hours - add a little to close gaps
+        hours = np.arange(0, period+0.01, 0.01)
 
-    # Calculate the period in hours
-    elements = osculating_elements_of(rand_sat.at(rand_sat.epoch))
-    period = elements.period_in_days*24
+        # Calculate other elements
+        self.answers['semimajor_axis'] = elements.semi_major_axis
+        self.answers['eccentricity'] = elements.eccentricity
+        self.answers['inclination'] = elements.inclination
+        self.answers['longitude_of_AN'] = elements.longitude_of_ascending_node
+        self.answers['argument_of_periapsis'] = elements.argument_of_periapsis
 
-    # Create a time series representing hours - add a little to close gaps
-    hours = np.arange(0, period+0.01, 0.01)
+        # Produce a Time object spanning a series of timestamps from the epoch
+        epoch = satellite.epoch
+        time = self.ts.utc(epoch.utc.year, epoch.utc.month, epoch.utc.day, hours)
 
-    # Calculate other elements
-    inclination = elements.inclination
+        # Propagate the orbit through the time series
+        Rpos = satellite.at(time).position.km
 
-    # Produce a Time object spanning a series of timestamps from the epoch
-    epoch = rand_sat.epoch
-    time = ts.utc(epoch.utc.year, epoch.utc.month, epoch.utc.day, hours)
+        return Rpos
 
-    # Propagate the orbit through the time series
-    Rpos = rand_sat.at(time).position.km
-
-    plotting.plot_orbit(Rpos)
+    def start_game_round(self):
+        satellite = self.get_random_orbit()
+        trajectory = self.propagate_orbit(satellite)
+        return trajectory
     
-    # TODO Input sanitisation and format support
-    period_guess = float(input("Guess the period: "))
-    inclination_guess = float(input("Guess the inclination: "))
+    def finish_game_round(self, guesses) -> None:
+        round_score = self.calculate_score(guesses)
+        self.total_score += round_score
 
-    score = calculate_score(period_guess, period, inclination_guess, inclination.degrees)
+        #print(f"Correct period = {period:0.2f} hours")
+        #print(f"Correct inclination = {inclination.degrees}")
+        #print(f"+{score} points!")
 
-    print(f"Correct period = {period:0.2f} hours")
-    print(f"Correct inclination = {inclination.degrees}")
-    print(f"+{score} points!")
+        return round_score
 
-    # TODO fix blocking on mayavi plots so they can be viewed while guessing
-    # plotting.close_plots()
+    def load_tles(self): # -> Array of earth satellite objects 
 
-    return score
+        #Load ephemeris data
+        load = Loader('~/skyfield-data')
+        data = load('de421.bsp')
+        self.ts   = load.timescale()
 
-def load_tles(): # -> Array of earth satellite objects 
+        # Get TLEs from Celestrak
+        stations_url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle'
+        self.satellites = load.tle_file(stations_url)
+        print('Loaded', len(self.satellites), 'satellites')
 
-    #Load ephemeris data
-    load = Loader('~/skyfield-data')
-    data = load('de421.bsp')
-    ts   = load.timescale()
+    def basic_prompts(self):
+        guesses = self.answers
+        for key in guesses:
+            guesses[key] = float(input(f"Guess the {key}: "))
+        return guesses
+    
+    def print_answers(self):
+        for key in self.answers:
+            print(f"Correct {key} = {self.answers[key]}")
 
-    # Get TLEs from Celestrak
-    stations_url = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle'
-    satellites = load.tle_file(stations_url)
-    print('Loaded', len(satellites), 'satellites')
-
-    return satellites, ts
+    def run(self):
+        while True:
+            trajectory = self.start_game_round()
+            #plotting.plot_orbit(trajectory, mlab.)
+            guesses = self.basic_prompts()
+            round_score = self.finish_game_round(guesses)
+            print(f"+ {round_score} points!")
+            self.print_answers()
+            print(f"Total score = {self.total_score}")
 
 if __name__ == '__main__':
 
-    satellites, ts = load_tles()
-    num_games = 10
-    running_score = 0
-    for i in range(1, num_games+1):
-        running_score += play_game(satellites, ts)
-        print(f"Total score = {running_score} in {i} games")
+    game = Game()
+    game.run()
+    

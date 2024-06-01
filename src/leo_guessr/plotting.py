@@ -4,12 +4,7 @@ from tvtk.api import tvtk
 def close_plots():
     mlab.close()
 
-def plot_orbit(Rpos) -> None:
-    x, y, z = Rpos
-
-    # PLOTTING
-    fig = mlab.figure()
-
+def plot_earth(scene) -> None:
     # Load and map texture for Earth
     img = tvtk.JPEGReader()
     img.file_name = 'blue_marble_spherical.jpg'
@@ -25,9 +20,10 @@ def plot_orbit(Rpos) -> None:
     # Assemble rest of the pipeline, assign texture    
     sphere_mapper = tvtk.PolyDataMapper(input_connection=sphere.output_port)
     sphere_actor = tvtk.Actor(mapper=sphere_mapper, texture=texture)
-    fig.scene.add_actor(sphere_actor)
+    scene.add_actor(sphere_actor)
+
+def plot_orbit(Rpos, scene) -> None:
+    x, y, z = Rpos
 
     # Plot the trajectory
-    mlab.plot3d(x, y, z, color=(1.0,0,0), tube_radius=30.)
-
-    mlab.show()
+    mlab.plot3d(x, y, z, color=(1.0,0,0), tube_radius=30., figure=scene.mayavi_scene)
