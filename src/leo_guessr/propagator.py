@@ -1,6 +1,6 @@
 import numpy as np
 
-import plotting
+import leo_guessr.plotting as plotting
 
 if __name__ == '__main__':
     # Using SI units

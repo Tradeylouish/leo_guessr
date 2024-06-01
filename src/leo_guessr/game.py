@@ -10,9 +10,9 @@ import plotting
 
 def calculate_score(period_guess, period, inclination_guess, inclination):
     MAX_POINTS = 30
-    period_score = 1 - abs((period - period_guess) / period)
-    inclination_score = 1 - abs((inclination - inclination_guess) / inclination)
-
+    period_score = max(0, 1 - abs((period - period_guess) / period))
+    inclination_score = max(0, 1 - abs((inclination - inclination_guess) / inclination))
+    
     return round(MAX_POINTS * period_score * inclination_score)
 
 def play_game(satellites, ts):
