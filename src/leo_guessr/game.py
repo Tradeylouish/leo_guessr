@@ -5,9 +5,9 @@ from skyfield.api import Loader, EarthSatellite
 from skyfield.timelib import Time
 from skyfield.elementslib import osculating_elements_of
 
-import plotting
+import leo_guessr.plotting as plotting
 
-class Game:
+class Game:  
 
     satellites, ts = '',''
     total_score = 0
@@ -17,6 +17,9 @@ class Game:
                'longitude_of_AN':0,
                'argument_of_periapsis':0
     }
+
+    trajectory = []
+    sub_trajectory = []
 
     def __init__(self) -> None:
         self.load_tles()
@@ -35,7 +38,7 @@ class Game:
 
         return round(MAX_POINTS * score_multiplier)
 
-    def get_random_orbit(self):
+    def get_random_satellite(self):
         index = random.randint(0, len(self.satellites))
         rand_sat = self.satellites[index]
         return rand_sat
@@ -62,14 +65,40 @@ class Game:
         # Propagate the orbit through the time series
         Rpos = satellite.at(time).position.km
 
-        return Rpos
+        self.trajectory = Rpos
+        
+        # Select a random time of flight to produce a sub-trajectory
+        index = random.randint(0, len(hours))
+        self.time_of_flight = hours[index] - hours[0]
+        print(self.trajectory.shape)
 
-    def start_game_round(self):
-        satellite = self.get_random_orbit()
-        trajectory = self.propagate_orbit(satellite)
-        return trajectory
+        self.sub_trajectory = self.trajectory[:, 0:index]
+        #print(self.sub_trajectory)
+        
+    def get_trajectory(self):
+        return self.trajectory
     
-    def finish_game_round(self, guesses) -> None:
+    def get_sub_trajectory(self):
+        return self.sub_trajectory
+    
+    def get_lambert_points(self):
+
+        print(self.sub_trajectory.shape)
+        print(self.sub_trajectory[:, 0].shape)
+        return self.sub_trajectory[:, 0], self.sub_trajectory[:, -1]
+    
+    def get_time_of_flight(self) -> str:
+        hours = int(self.time_of_flight // 1)
+        minutes = round((self.time_of_flight % 1) * 60)
+
+        return f"{hours}h {minutes}m"
+    
+    def new_round(self) -> None:
+        satellite = self.get_random_satellite()
+        self.propagate_orbit(satellite)
+        
+    
+    def finish_round(self, guesses) -> None:
         round_score = self.calculate_score(guesses)
         self.total_score += round_score
 
@@ -103,13 +132,23 @@ class Game:
 
     def run(self):
         while True:
-            trajectory = self.start_game_round()
+            trajectory = self.new_round()
             #plotting.plot_orbit(trajectory, mlab.)
             guesses = self.basic_prompts()
-            round_score = self.finish_game_round(guesses)
+            round_score = self.finish_round(guesses)
             print(f"+ {round_score} points!")
             self.print_answers()
             print(f"Total score = {self.total_score}")
+
+    # def get_time_of_flight(self):
+
+    #     return f"{random.randint(0, 5)}h {random.randint(0, 60)}m"
+    
+    def get_two_random_positions(RPos):
+        index1 = random.int(0, len(RPos))
+        index2 = random.int(0, len(RPos))
+
+        return RPos[index1], RPos[index2]
 
 if __name__ == '__main__':
 

@@ -27,3 +27,9 @@ def plot_orbit(Rpos, scene) -> None:
 
     # Plot the trajectory
     mlab.plot3d(x, y, z, color=(1.0,0,0), tube_radius=30., figure=scene.mayavi_scene)
+
+def plot_lambert(points_pair, scene):
+    for point in points_pair:
+        x, y, z = point
+        # Plot the trajectory
+        mlab.points3d(x, y, z, color=(1.0,0,0), scale_factor= 500, figure=scene.mayavi_scene)

@@ -2,13 +2,13 @@ import numpy as np
 
 from traits.api import HasTraits, Instance, Button, String, Range, \
     on_trait_change
-from traitsui.api import View, Item, HSplit, Group
+from traitsui.api import View, Item, HSplit, Group, Readonly
 
 from mayavi import mlab
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
 
-import plotting
-import game
+import leo_guessr.plotting as plotting
+import leo_guessr.game as game
 
 
 class MyDialog(HasTraits):
@@ -20,7 +20,7 @@ class MyDialog(HasTraits):
 
     # Game stuff to load once
 
-    time_of_flight = String("0 seconds")
+    time_of_flight = String("Time of Flight: 1h 30m")
 
     semimajor_axis = Range(6371, 50000, 7000)
     eccentricity = Range(0.0, 1.0, 0.0)
@@ -42,19 +42,23 @@ class MyDialog(HasTraits):
     @on_trait_change('guessbutton')
     def make_guess(self):
         print("Pressed")
-        self.game.finish_game_round({})
+        self.game.finish_round({})
         self.start_round()
 
     def start_round(self):
         mlab.clf(figure=self.scene1.mayavi_scene)
+        mlab.clf(figure=self.scene2.mayavi_scene)
         plotting.plot_earth(self.scene1)
-        RPos = self.game.start_game_round()
-        plotting.plot_orbit(RPos, self.scene1)
+        plotting.plot_earth(self.scene2)
+        self.game.new_round()
+        plotting.plot_lambert(self.game.get_lambert_points(), self.scene1)
+        plotting.plot_orbit(self.game.get_trajectory(), self.scene2)
+        self.time_of_flight = f"Time of Flight: {self.game.get_time_of_flight()}"
 
     # The layout of the dialog created
     view = View(HSplit(
                   Group(
-                      'time_of_flight',
+                      Readonly('time_of_flight', style_sheet='*{font-size:24px}'),
                        Item('scene1',
                             editor=SceneEditor(), height=400,
                             width=800),
