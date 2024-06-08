@@ -70,10 +70,7 @@ class Game:
         # Select a random time of flight to produce a sub-trajectory
         index = random.randint(0, len(hours))
         self.time_of_flight = hours[index] - hours[0]
-        print(self.trajectory.shape)
-
         self.sub_trajectory = self.trajectory[:, 0:index]
-        #print(self.sub_trajectory)
         
     def get_trajectory(self):
         return self.trajectory
@@ -82,9 +79,6 @@ class Game:
         return self.sub_trajectory
     
     def get_lambert_points(self):
-
-        print(self.sub_trajectory.shape)
-        print(self.sub_trajectory[:, 0].shape)
         return self.sub_trajectory[:, 0], self.sub_trajectory[:, -1]
     
     def get_time_of_flight(self) -> str:
@@ -139,10 +133,6 @@ class Game:
             print(f"+ {round_score} points!")
             self.print_answers()
             print(f"Total score = {self.total_score}")
-
-    # def get_time_of_flight(self):
-
-    #     return f"{random.randint(0, 5)}h {random.randint(0, 60)}m"
     
     def get_two_random_positions(RPos):
         index1 = random.int(0, len(RPos))
