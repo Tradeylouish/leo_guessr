@@ -11,11 +11,23 @@ class Game:
 
     satellites, ts = '',''
     total_score = 0
-    answers = {'semimajor_axis':0,
+    round_number = 0
+    round_length = 5 # In seconds
+    answers = {'period':0,
+               'semimajor_axis':0,
                'eccentricity':0,
                'inclination':0,
                'longitude_of_AN':0,
                'argument_of_periapsis':0
+    }
+
+    RANGE_SIZES = {
+        'period':26,
+        'semimajor_axis':43629,
+        'eccentricity':1,
+        'inclination':180,
+        'longitude_of_AN':360,
+        'argument_of_periapsis':360
     }
 
     trajectory = []
@@ -25,18 +37,18 @@ class Game:
         self.load_tles()
 
     def calculate_score(self, guesses : dict[str:float]):
-        MAX_POINTS = 30
+        MAX_POINTS = 5000.0
+        #score_per_guess = MAX_POINTS/len(guesses)
         score_multiplier = 1
 
         for key in guesses:
+            #
             answer = self.answers[key]
-            # TODO change scoring algorithm to better avoid division by 0
-            # Avoid division by 0
-            if answer == 0:
-                continue
-            score_multiplier *= max(0, 1 - abs((answer - guesses[key]) / answer))
+            error = answer - guesses[key]
+            score_multiplier *= 1 - abs(error/self.RANGE_SIZES[key])
 
-        return round(MAX_POINTS * score_multiplier)
+        print(MAX_POINTS*score_multiplier)
+        return round(MAX_POINTS*score_multiplier)
 
     def get_random_satellite(self):
         index = random.randint(0, len(self.satellites))
@@ -51,12 +63,13 @@ class Game:
         # Create a time series representing hours - add a little to close gaps
         hours = np.arange(0, period+0.01, 0.01)
 
-        # Calculate other elements
-        self.answers['semimajor_axis'] = elements.semi_major_axis
+        # Save orbit details as answer list
+        self.answers['period'] = period
+        self.answers['semimajor_axis'] = elements.semi_major_axis.km
         self.answers['eccentricity'] = elements.eccentricity
-        self.answers['inclination'] = elements.inclination
-        self.answers['longitude_of_AN'] = elements.longitude_of_ascending_node
-        self.answers['argument_of_periapsis'] = elements.argument_of_periapsis
+        self.answers['inclination'] = elements.inclination.degrees
+        self.answers['longitude_of_AN'] = elements.longitude_of_ascending_node.degrees
+        self.answers['argument_of_periapsis'] = elements.argument_of_periapsis.degrees
 
         # Produce a Time object spanning a series of timestamps from the epoch
         epoch = satellite.epoch
@@ -90,7 +103,10 @@ class Game:
     def new_round(self) -> None:
         satellite = self.get_random_satellite()
         self.propagate_orbit(satellite)
+        self.round_number += 1
         
+    def get_round_number(self) -> str:
+        return f"{self.round_number}/∞"
     
     def finish_round(self, guesses) -> None:
         round_score = self.calculate_score(guesses)
@@ -101,6 +117,9 @@ class Game:
         #print(f"+{score} points!")
 
         return round_score
+    
+    def get_total_score(self) -> str:
+        return '{:,}'.format(self.total_score)
 
     def load_tles(self): # -> Array of earth satellite objects 
 
